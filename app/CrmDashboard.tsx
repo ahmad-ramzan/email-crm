@@ -40,6 +40,7 @@ export default function CrmDashboard({ initialLeads }: Props) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
@@ -83,9 +84,20 @@ export default function CrmDashboard({ initialLeads }: Props) {
         lead.email.toLowerCase().includes(q);
 
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
-      return matchesSearch && matchesStatus;
+
+      let matchesDate = true;
+      if (dateFilter) {
+        if (lead.last_outreach_date) {
+          const outreachDate = new Date(lead.last_outreach_date).toISOString().split('T')[0];
+          matchesDate = outreachDate === dateFilter;
+        } else {
+          matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [leads, searchQuery, statusFilter]);
+  }, [leads, searchQuery, statusFilter, dateFilter]);
 
   const outreachTodayCount = leads.filter(l => isToday(l.last_outreach_date)).length;
 
@@ -211,6 +223,7 @@ export default function CrmDashboard({ initialLeads }: Props) {
             // Map the user's specific CSV headers to our fields
             const newLeadData: Partial<Lead> = {
               full_name: row.fullName || `${row.firstName || ''} ${row.lastName || ''}`.trim() || 'Unknown Lead',
+              company: row.companyName || null,
               email: row.email || '',
               phone: row.phone || null,
               social_linkedin: row.linkedinUrl ? (row.linkedinUrl.startsWith('http') ? row.linkedinUrl : `https://${row.linkedinUrl}`) : null,
@@ -219,7 +232,7 @@ export default function CrmDashboard({ initialLeads }: Props) {
               location: row.personCountry || null,
               status: row.rowType === 'lead' ? 'new' : 'new',
               role: row.title || null,
-              notes: row.companyName ? `Company: ${row.companyName}` : null,
+              notes: null,
             };
 
             // Only import if we at least have a name or email
@@ -333,6 +346,15 @@ export default function CrmDashboard({ initialLeads }: Props) {
                 <option value="closed">Closed</option>
               </select>
             </div>
+
+            <div className={styles.field}>
+              <span className="material-symbols-outlined">event</span>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
+            </div>
           </section>
 
           <section className={styles.tableWrap}>
@@ -348,12 +370,17 @@ export default function CrmDashboard({ initialLeads }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeads.map((lead) => {
-                    const isExpanded = expandedLeadId === lead.id;
-                    const contactedToday = isToday(lead.last_outreach_date);
+                  {filteredLeads.length > 0 ? (
+                    filteredLeads.map((lead) => {
+                      const isExpanded = expandedLeadId === lead.id;
+                      const contactedToday = isToday(lead.last_outreach_date);
+                      
+                      const extractedCompany = lead.notes?.match(/Company:\s*([^\n]+)/i)?.[1];
+                      const displayCompany = lead.company || extractedCompany || "-";
+                      const displayNotes = lead.notes ? lead.notes.replace(/Company:\s*([^\n]+)/i, '').trim() : null;
 
-                    return (
-                      <React.Fragment key={lead.id}>
+                      return (
+                        <React.Fragment key={lead.id}>
                         <tr
                           className={`${styles.customerRow} ${isExpanded ? styles.customerRowActive : ""}`}
                           onClick={(e) => handleRowClick(lead.id, e)}
@@ -363,7 +390,7 @@ export default function CrmDashboard({ initialLeads }: Props) {
                               <div className={styles.avatar}>{getInitials(lead.full_name)}</div>
                               <div>
                                 <strong>{lead.full_name}</strong>
-                                <span>{lead.company || "No Company"}</span>
+                                <span>{displayCompany === "-" ? "No Company" : displayCompany}</span>
                               </div>
                             </div>
                           </td>
@@ -419,9 +446,10 @@ export default function CrmDashboard({ initialLeads }: Props) {
                                   <div className={styles.infoGrid}>
                                     <div className={styles.infoBox}><span>Email</span><strong>{lead.email}</strong></div>
                                     <div className={styles.infoBox}><span>Phone</span><strong>{lead.phone || "-"}</strong></div>
+                                    <div className={styles.infoBox}><span>Company</span><strong>{displayCompany}</strong></div>
                                     <div className={styles.infoBox}><span>Designantion</span><strong>{lead.role || "-"}</strong></div>
                                     <div className={styles.infoBox}><span>Location</span><strong>{lead.location || "-"}</strong></div>
-                                    {lead.notes && <p className={styles.note}>{lead.notes}</p>}
+                                    {displayNotes && <p className={styles.note}>{displayNotes}</p>}
                                   </div>
                                 </div>
 
@@ -490,9 +518,10 @@ export default function CrmDashboard({ initialLeads }: Props) {
                             </td>
                           </tr>
                         )}
-                      </React.Fragment>
-                    );
-                  })}
+                        </React.Fragment>
+                      );
+                    })
+                  ) : null}
                 </tbody>
               </table>
 
