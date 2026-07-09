@@ -53,6 +53,21 @@ export async function markOutreachToday(leadId: string, contactedToday: boolean)
 export async function createLead(data: Partial<Lead>) {
   const supabase = await getSupabase();
 
+  if (!data.email) {
+    throw new Error("Email is required.");
+  }
+
+  // Check for duplicate email
+  const { data: existingLead } = await supabase
+    .from("crm_leads")
+    .select("id")
+    .eq("email", data.email)
+    .single();
+
+  if (existingLead) {
+    throw new Error("A lead with this email already exists.");
+  }
+
   const { data: newLead, error } = await supabase
     .from("crm_leads")
     .insert([
@@ -93,6 +108,20 @@ export async function createLead(data: Partial<Lead>) {
 
 export async function updateLead(leadId: string, data: Partial<Lead>) {
   const supabase = await getSupabase();
+
+  if (data.email) {
+    // Check for duplicate email excluding the current lead
+    const { data: existingLead } = await supabase
+      .from("crm_leads")
+      .select("id")
+      .eq("email", data.email)
+      .neq("id", leadId)
+      .single();
+
+    if (existingLead) {
+      throw new Error("A lead with this email already exists.");
+    }
+  }
 
   const { data: updatedLead, error } = await supabase
     .from("crm_leads")

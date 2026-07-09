@@ -199,9 +199,9 @@ export default function CrmDashboard({ initialLeads }: Props) {
         setIsModalOpen(false);
         resetForm();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save lead", error);
-      alert("Failed to save lead. Ensure the Supabase schema is loaded and variables are correct.");
+      alert(`Failed to save lead: ${error.message || "Ensure the Supabase schema is loaded and variables are correct."}`);
     }
   };
 

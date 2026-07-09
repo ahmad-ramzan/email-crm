@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.crm_leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name TEXT NOT NULL,
     company TEXT,
-    email TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
     phone TEXT,
     status public.crm_lead_status NOT NULL DEFAULT 'new',
     budget TEXT,
