@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import CrmDashboard, { type Lead } from "./CrmDashboard";
-
+// main page for email crm
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
@@ -25,8 +25,8 @@ export default async function Home() {
       get(name: string) {
         return cookieStore.get(name)?.value;
       },
-      set(name: string, value: string, options: CookieOptions) {},
-      remove(name: string, options: CookieOptions) {},
+      set(name: string, value: string, options: CookieOptions) { },
+      remove(name: string, options: CookieOptions) { },
     },
   });
 
